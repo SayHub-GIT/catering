@@ -1,69 +1,125 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
-import { supabase } from "@/lib/supabase";
-import { useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Utensils } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, CheckCircle2, Utensils } from "lucide-react";
+
+import { supabase } from "@/lib/supabase";
+import { getSession, type SessionUser } from "@/lib/auth";
 
 function CheckoutForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const paketId = searchParams.get("paket_id");
-  const router = useRouter();
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [pelangganDetail, setPelangganDetail] = useState<any>(null);
   const [paket, setPaket] = useState<any>(null);
   const [metodePembayaran, setMetodePembayaran] = useState<any[]>([]);
   const [selectedMetode, setSelectedMetode] = useState<number | "">("");
+
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    // Check auth
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) {
-      router.push("/login");
+    const session = getSession();
+
+    if (!session) {
+      router.replace("/login");
       return;
     }
-    const parsedUser = JSON.parse(storedUser);
-    if (parsedUser.role !== "pelanggan") {
-      alert("Hanya pelanggan yang dapat melakukan pemesanan.");
-      router.push("/dashboard");
+
+    if (session.role !== "pelanggan") {
+      router.replace("/dashboard");
       return;
     }
-    setUser(parsedUser);
 
-    async function fetchData() {
-      if (!paketId) return;
-      try {
-        // Fetch paket
-        const { data: paketData } = await supabase.from("pakets").select("*").eq("id", paketId).single();
-        setPaket(paketData);
-
-        // Fetch metode pembayaran
-        const { data: metodeData } = await supabase.from("jenis_pembayarans").select("*");
-        setMetodePembayaran(metodeData || []);
-        if (metodeData && metodeData.length > 0) setSelectedMetode(metodeData[0].id);
-
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
+    if (!paketId) {
+      router.replace("/paket");
+      return;
     }
-    fetchData();
+
+    const paketIdNumber = Number(paketId);
+
+    if (Number.isNaN(paketIdNumber)) {
+      router.replace("/paket");
+      return;
+    }
+
+    setUser(session);
+    fetchData(session.id, paketIdNumber);
   }, [paketId, router]);
 
-  const handleCheckout = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!paket || !selectedMetode) return alert("Pilih metode pembayaran");
+  async function fetchData(idPelanggan: number, selectedPaketId: number) {
+    setLoading(true);
+
+    try {
+      const { data: pelangganData, error: pelangganError } = await supabase
+        .from("pelanggans")
+        .select("id, nama_pelanggan, email, telepon, alamat1")
+        .eq("id", idPelanggan)
+        .maybeSingle();
+
+      if (pelangganError) throw pelangganError;
+      if (!pelangganData) throw new Error("Data pelanggan tidak ditemukan.");
+
+      setPelangganDetail(pelangganData);
+
+      const { data: paketData, error: paketError } = await supabase
+        .from("pakets")
+        .select("*")
+        .eq("id", selectedPaketId)
+        .maybeSingle();
+
+      if (paketError) throw paketError;
+      if (!paketData) throw new Error("Paket tidak ditemukan.");
+
+      setPaket(paketData);
+
+      const { data: metodeData, error: metodeError } = await supabase
+        .from("jenis_pembayarans")
+        .select("*")
+        .order("id", { ascending: true });
+
+      if (metodeError) throw metodeError;
+
+      setMetodePembayaran(metodeData || []);
+
+      if (metodeData && metodeData.length > 0) {
+        setSelectedMetode(metodeData[0].id);
+      }
+    } catch (error: any) {
+      console.error("CHECKOUT FETCH ERROR:", error);
+      alert(error?.message || "Gagal memuat data checkout.");
+      router.replace("/paket");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const handleCheckout = async () => {
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+
+    if (!paket) {
+      alert("Paket tidak ditemukan.");
+      return;
+    }
+
+    if (!selectedMetode) {
+      alert("Pilih metode pembayaran terlebih dahulu.");
+      return;
+    }
+
     setProcessing(true);
 
     try {
-      const noResi = "INV-" + Date.now().toString().slice(-6);
-      
-      // 1. Create Pesanan
+      const noResi = "INV-" + Date.now().toString().slice(-8);
+
       const { data: pesanan, error: pesananError } = await supabase
         .from("pesanans")
         .insert([
@@ -73,37 +129,42 @@ function CheckoutForm() {
             no_resi: noResi,
             tgl_pesan: new Date().toISOString(),
             status_pesan: "Menunggu Konfirmasi",
-            total_bayar: paket.harga_paket
-          }
+            total_bayar: paket.harga_paket || 0,
+          },
         ])
-        .select()
+        .select("id")
         .single();
 
       if (pesananError) throw pesananError;
 
-      // 2. Create Detail Pemesanan
       const { error: detailError } = await supabase
         .from("detail_pemesanans")
         .insert([
           {
             id_pemesanan: pesanan.id,
             id_paket: paket.id,
-            subtotal: paket.harga_paket
-          }
+            subtotal: paket.harga_paket || 0,
+          },
         ]);
 
       if (detailError) throw detailError;
 
       setSuccess(true);
     } catch (error: any) {
-      alert("Gagal memproses pesanan: " + error.message);
+      console.error("CHECKOUT ERROR:", error);
+      alert("Gagal memproses pesanan: " + (error?.message || "Unknown error"));
     } finally {
       setProcessing(false);
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Memuat data checkout...</div>;
-  if (!paket) return <div className="p-8 text-center">Paket tidak ditemukan.</div>;
+  if (loading) {
+    return <div className="p-8 text-center">Memuat data checkout...</div>;
+  }
+
+  if (!paket) {
+    return <div className="p-8 text-center">Paket tidak ditemukan.</div>;
+  }
 
   if (success) {
     return (
@@ -111,15 +172,19 @@ function CheckoutForm() {
         <div className="flex justify-center">
           <CheckCircle2 className="h-20 w-20 text-green-500" />
         </div>
+
         <h2 className="text-2xl font-bold">Pesanan Berhasil!</h2>
+
         <p className="text-muted-foreground">
-          Pesanan Anda telah kami terima dan sedang menunggu konfirmasi dari admin. 
+          Pesanan Anda telah kami terima dan sedang menunggu konfirmasi dari admin.
         </p>
-        <div className="pt-4">
-          <Link href="/dashboard/pelanggan" className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold hover:bg-primary/90 transition-all inline-block w-full">
-            Lihat Status Pesanan
-          </Link>
-        </div>
+
+        <Link
+          href="/dashboard/pelanggan"
+          className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold hover:bg-primary/90 transition-all inline-block w-full"
+        >
+          Lihat Status Pesanan
+        </Link>
       </div>
     );
   }
@@ -127,43 +192,80 @@ function CheckoutForm() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 mt-8">
       <div className="flex items-center gap-4">
-        <button onClick={() => router.back()} className="p-2 hover:bg-secondary rounded-full transition-colors">
+        <button
+          onClick={() => router.back()}
+          className="p-2 hover:bg-secondary rounded-full transition-colors"
+          type="button"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-2xl font-bold tracking-tight">Checkout Pemesanan</h1>
+
+        <h1 className="text-2xl font-bold tracking-tight">
+          Checkout Pemesanan
+        </h1>
       </div>
 
       <div className="grid md:grid-cols-3 gap-8">
         <div className="md:col-span-2 space-y-6">
           <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
-            <h2 className="text-lg font-bold mb-4 border-b border-border pb-2">Informasi Pemesan</h2>
+            <h2 className="text-lg font-bold mb-4 border-b border-border pb-2">
+              Informasi Pemesan
+            </h2>
+
             <div className="space-y-2 text-sm">
-              <p><span className="text-muted-foreground w-24 inline-block">Nama</span> : <span className="font-medium">{user?.nama_pelanggan}</span></p>
-              <p><span className="text-muted-foreground w-24 inline-block">Telepon</span> : <span className="font-medium">{user?.telepon}</span></p>
-              <p><span className="text-muted-foreground w-24 inline-block">Alamat</span> : <span className="font-medium">{user?.alamat1}</span></p>
+              <p>
+                <span className="text-muted-foreground w-24 inline-block">Nama</span>
+                : <span className="font-medium">{pelangganDetail?.nama_pelanggan || "-"}</span>
+              </p>
+
+              <p>
+                <span className="text-muted-foreground w-24 inline-block">Telepon</span>
+                : <span className="font-medium">{pelangganDetail?.telepon || "-"}</span>
+              </p>
+
+              <p>
+                <span className="text-muted-foreground w-24 inline-block">Alamat</span>
+                : <span className="font-medium">{pelangganDetail?.alamat1 || "-"}</span>
+              </p>
             </div>
+
             <p className="text-xs text-yellow-600 bg-yellow-50 p-3 rounded-lg mt-4 border border-yellow-200">
-              *Pastikan alamat Anda sudah benar untuk keperluan pengiriman. Anda bisa mengubahnya di menu Profil.
+              *Pastikan alamat Anda sudah benar untuk keperluan pengiriman.
             </p>
           </div>
 
           <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
-            <h2 className="text-lg font-bold mb-4 border-b border-border pb-2">Metode Pembayaran</h2>
+            <h2 className="text-lg font-bold mb-4 border-b border-border pb-2">
+              Metode Pembayaran
+            </h2>
+
             {metodePembayaran.length === 0 ? (
-              <p className="text-sm text-red-500">Belum ada metode pembayaran yang dikonfigurasi admin.</p>
+              <p className="text-sm text-red-500">
+                Belum ada metode pembayaran.
+              </p>
             ) : (
               <div className="space-y-3">
                 {metodePembayaran.map((m) => (
-                  <label key={m.id} className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all ${selectedMetode === m.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border hover:bg-secondary/50'}`}>
-                    <input 
-                      type="radio" 
-                      name="metode" 
-                      value={m.id} 
+                  <label
+                    key={m.id}
+                    className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all ${
+                      selectedMetode === m.id
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "border-border hover:bg-secondary/50"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="metode"
+                      value={m.id}
                       checked={selectedMetode === m.id}
                       onChange={() => setSelectedMetode(m.id)}
-                      className="mr-4 h-4 w-4 text-primary focus:ring-primary"
+                      className="mr-4 h-4 w-4"
                     />
-                    <span className="font-medium">{m.metode_pembayaran}</span>
+
+                    <span className="font-medium">
+                      {m.metode_pembayaran}
+                    </span>
                   </label>
                 ))}
               </div>
@@ -171,20 +273,36 @@ function CheckoutForm() {
           </div>
         </div>
 
-        <div className="md:col-span-1">
+        <div>
           <div className="bg-card border border-border rounded-3xl p-6 shadow-sm sticky top-24">
-            <h2 className="text-lg font-bold mb-4 border-b border-border pb-2">Ringkasan Pesanan</h2>
-            
+            <h2 className="text-lg font-bold mb-4 border-b border-border pb-2">
+              Ringkasan Pesanan
+            </h2>
+
             <div className="space-y-4 mb-6">
+              {paket.foto1 && (
+                <img
+                  src={paket.foto1}
+                  alt={paket.nama_paket}
+                  className="w-full h-36 object-cover rounded-xl border"
+                />
+              )}
+
               <div>
-                <p className="font-bold text-sm">{paket?.nama_paket}</p>
-                <p className="text-xs text-muted-foreground">{paket?.jenis} - {paket?.jumlah_pax} Pax</p>
+                <p className="font-bold text-sm">{paket.nama_paket}</p>
+                <p className="text-xs text-muted-foreground">
+                  {paket.jenis} - {paket.jumlah_pax} Pax
+                </p>
               </div>
-              <div className="flex justify-between items-center text-sm">
+
+              <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-medium">Rp {paket?.harga_paket?.toLocaleString('id-ID')}</span>
+                <span className="font-medium">
+                  Rp {paket.harga_paket?.toLocaleString("id-ID")}
+                </span>
               </div>
-              <div className="flex justify-between items-center text-sm">
+
+              <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Ongkos Kirim</span>
                 <span className="font-medium text-green-600">Gratis</span>
               </div>
@@ -192,15 +310,18 @@ function CheckoutForm() {
 
             <div className="border-t border-border pt-4 mb-6">
               <div className="flex justify-between items-center">
-                <span className="font-bold">Total Pembayaran</span>
-                <span className="text-xl font-bold text-primary">Rp {paket?.harga_paket?.toLocaleString('id-ID')}</span>
+                <span className="font-bold">Total</span>
+                <span className="text-xl font-bold text-primary">
+                  Rp {paket.harga_paket?.toLocaleString("id-ID")}
+                </span>
               </div>
             </div>
 
-            <button 
+            <button
               onClick={handleCheckout}
               disabled={processing || !selectedMetode}
-              className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+              type="button"
+              className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl font-bold hover:bg-primary/90 transition-all disabled:opacity-50"
             >
               {processing ? "Memproses..." : "Buat Pesanan"}
             </button>
@@ -220,11 +341,15 @@ export default function CheckoutPage() {
             <div className="bg-primary text-primary-foreground p-1.5 rounded-lg">
               <Utensils className="h-5 w-5" />
             </div>
-            <span className="font-bold text-xl tracking-tight">Symphony</span>
+
+            <span className="font-bold text-xl tracking-tight">
+              Symphony
+            </span>
           </Link>
         </div>
       </header>
-      <Suspense fallback={<div className="text-center p-12">Memuat sistem pembayaran...</div>}>
+
+      <Suspense fallback={<div className="text-center p-12">Memuat...</div>}>
         <CheckoutForm />
       </Suspense>
     </div>

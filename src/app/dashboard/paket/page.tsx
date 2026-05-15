@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 
 export default function KelolaPaket() {
   const [pakets, setPakets] = useState<any[]>([]);
@@ -85,9 +85,12 @@ export default function KelolaPaket() {
                     <td className="px-6 py-4">{paket.kategori}</td>
                     <td className="px-6 py-4 text-primary font-semibold">Rp {paket.harga_paket?.toLocaleString('id-ID')}</td>
                     <td className="px-6 py-4 text-right flex justify-end gap-2">
-                      <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                        <Edit className="h-4 w-4" />
-                      </button>
+                      <Link
+      href={`/dashboard/paket/edit/${paket.id}`}
+      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+    >
+      <Pencil className="h-4 w-4" />
+    </Link>
                       <button onClick={() => handleDelete(paket.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                         <Trash2 className="h-4 w-4" />
                       </button>

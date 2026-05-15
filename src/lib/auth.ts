@@ -1,13 +1,19 @@
+export type UserRole = "pelanggan" | "admin" | "owner" | "kurir";
+
 export interface SessionUser {
   id: number;
   nama: string;
   email: string;
-  role: string;
+  role: UserRole;
 }
 
 const SESSION_KEY = "catering-session";
 
-// GET SESSION
+export const saveSession = (user: SessionUser) => {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+};
+
 export const getSession = (): SessionUser | null => {
   if (typeof window === "undefined") return null;
 
@@ -16,25 +22,21 @@ export const getSession = (): SessionUser | null => {
   if (!session) return null;
 
   try {
-    return JSON.parse(session);
+    return JSON.parse(session) as SessionUser;
   } catch {
+    localStorage.removeItem(SESSION_KEY);
     return null;
   }
 };
 
-// SAVE SESSION
-export const saveSession = (user: SessionUser) => {
-  localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-};
-
-// LOGOUT
 export const logout = () => {
+  if (typeof window === "undefined") return;
   localStorage.removeItem(SESSION_KEY);
-
-  window.location.href = "/";
+  window.location.href = "/login";
 };
 
-// CHECK LOGIN
-export const isLoggedIn = () => {
-  return !!getSession();
+export const getDashboardPath = (role: UserRole) => {
+  if (role === "pelanggan") return "/dashboard/pelanggan";
+  if (role === "kurir") return "/dashboard/pengiriman";
+  return "/dashboard";
 };

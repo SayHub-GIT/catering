@@ -2,99 +2,109 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { ShoppingBag } from "lucide-react";
-import Link from "next/link";
+import { ShoppingCart, Package, Users, DollarSign } from "lucide-react";
 
-export default function PelangganDashboard() {
-  const [pesanans, setPesanans] = useState<any[]>([]);
+export default function AdminDashboard() {
+  const [stats, setStats] = useState({
+    totalPesanan: 0,
+    totalPendapatan: 0,
+    totalPelanggan: 0,
+    totalPaket: 0,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchPesanans() {
-      const storedUser = localStorage.getItem("user");
-      if (!storedUser) return;
-      const user = JSON.parse(storedUser);
-
+    async function fetchStats() {
+      setLoading(true);
       try {
-        const { data, error } = await supabase
+        // Fetch total pesanan
+        const { count: countPesanan } = await supabase
           .from("pesanans")
-          .select(`
-            *,
-            jenis_pembayarans (metode_pembayaran)
-          `)
-          .eq("id_pelanggan", user.id)
-          .order("tgl_pesan", { ascending: false });
+          .select("*", { count: 'exact', head: true });
+          
+        // Fetch total pendapatan (sum of total_bayar where status is not Menunggu Konfirmasi... or just all for now)
+        const { data: pesanans } = await supabase
+          .from("pesanans")
+          .select("total_bayar");
+        
+        const totalPendapatan = pesanans?.reduce((sum, item) => sum + (item.total_bayar || 0), 0) || 0;
 
-        if (error) throw error;
-        setPesanans(data || []);
+        // Fetch total pelanggan
+        const { count: countPelanggan } = await supabase
+          .from("pelanggans")
+          .select("*", { count: 'exact', head: true });
+
+        // Fetch total paket
+        const { count: countPaket } = await supabase
+          .from("pakets")
+          .select("*", { count: 'exact', head: true });
+
+        setStats({
+          totalPesanan: countPesanan || 0,
+          totalPendapatan,
+          totalPelanggan: countPelanggan || 0,
+          totalPaket: countPaket || 0,
+        });
       } catch (error) {
-        console.error("Error fetching pesanan:", error);
+        console.error("Error fetching stats:", error);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchPesanans();
+    fetchStats();
   }, []);
 
-  if (loading) return <div>Memuat pesanan Anda...</div>;
+  if (loading) return <div>Memuat data statistik...</div>;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Pesanan Saya</h1>
-        <p className="text-muted-foreground">Pantau status pesanan katering Anda di sini.</p>
+        <h1 className="text-2xl font-bold tracking-tight">Ringkasan Bisnis</h1>
+        <p className="text-muted-foreground">Selamat datang di panel kontrol Symphony Catering.</p>
       </div>
 
-      {pesanans.length === 0 ? (
-        <div className="bg-card border border-border rounded-2xl p-12 text-center shadow-sm flex flex-col items-center">
-          <div className="bg-secondary p-4 rounded-full mb-4 text-muted-foreground">
-            <ShoppingBag className="h-8 w-8" />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Stat Cards */}
+        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
+          <div className="flex flex-row items-center justify-between pb-2">
+            <h3 className="tracking-tight text-sm font-medium">Total Pesanan</h3>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </div>
-          <h3 className="font-bold text-lg">Belum ada pesanan</h3>
-          <p className="text-muted-foreground mb-6">Anda belum pernah memesan katering. Yuk, lihat menu kami!</p>
-          <Link href="/#packages" className="bg-primary text-primary-foreground px-6 py-2 rounded-xl font-medium hover:bg-primary/90 transition-colors">
-            Lihat Menu Katering
-          </Link>
+          <div className="text-2xl font-bold">{stats.totalPesanan}</div>
         </div>
-      ) : (
-        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-muted-foreground uppercase bg-secondary/50 border-b border-border">
-                <tr>
-                  <th className="px-6 py-4 font-medium">No. Resi</th>
-                  <th className="px-6 py-4 font-medium">Tanggal Pesan</th>
-                  <th className="px-6 py-4 font-medium">Status</th>
-                  <th className="px-6 py-4 font-medium">Total Bayar</th>
-                  <th className="px-6 py-4 font-medium text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pesanans.map((pesanan) => (
-                  <tr key={pesanan.id} className="border-b border-border hover:bg-secondary/20">
-                    <td className="px-6 py-4 font-medium">{pesanan.no_resi || '-'}</td>
-                    <td className="px-6 py-4">{new Date(pesanan.tgl_pesan).toLocaleDateString('id-ID')}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                        pesanan.status_pesan === 'Menunggu Konfirmasi' ? 'bg-yellow-100 text-yellow-800' :
-                        pesanan.status_pesan === 'Sedang Diproses' ? 'bg-blue-100 text-blue-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {pesanan.status_pesan}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">Rp {pesanan.total_bayar?.toLocaleString('id-ID')}</td>
-                    <td className="px-6 py-4 text-right">
-                      <button className="text-primary font-medium hover:underline">Detail</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
+          <div className="flex flex-row items-center justify-between pb-2">
+            <h3 className="tracking-tight text-sm font-medium">Total Pendapatan</h3>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </div>
+          <div className="text-2xl font-bold">Rp {stats.totalPendapatan.toLocaleString('id-ID')}</div>
         </div>
-      )}
+
+        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
+          <div className="flex flex-row items-center justify-between pb-2">
+            <h3 className="tracking-tight text-sm font-medium">Total Pelanggan</h3>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="text-2xl font-bold">{stats.totalPelanggan}</div>
+        </div>
+
+        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
+          <div className="flex flex-row items-center justify-between pb-2">
+            <h3 className="tracking-tight text-sm font-medium">Paket Aktif</h3>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="text-2xl font-bold">{stats.totalPaket}</div>
+        </div>
+      </div>
+      
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+        <h3 className="font-bold text-lg mb-4">Informasi Sistem</h3>
+        <p className="text-muted-foreground text-sm">
+          Sistem ini terhubung langsung dengan database Supabase. Semua perubahan pada pesanan, paket, dan pengiriman akan tersinkronisasi secara real-time. Gunakan menu di samping untuk mengelola data operasional.
+        </p>
+      </div>
     </div>
   );
 }
