@@ -1,110 +1,291 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { ShoppingCart, Package, Users, DollarSign } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
+import { CalendarDays, CreditCard, PackageOpen, ReceiptText } from "lucide-react";
 
-export default function AdminDashboard() {
-  const [stats, setStats] = useState({
-    totalPesanan: 0,
-    totalPendapatan: 0,
-    totalPelanggan: 0,
-    totalPaket: 0,
-  });
+import { getDashboardPath, getSession, type SessionUser } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
+
+type PesananSaya = {
+  id: number;
+  no_resi: string | null;
+  tgl_pesan: string | null;
+  status_pesan: "Menunggu Konfirmasi" | "Sedang Diproses" | "Menunggu Kurir" | null;
+  total_bayar: number | null;
+  jenis_pembayarans: {
+    metode_pembayaran: string;
+  } | null;
+  detail_pemesanans:
+    | {
+        subtotal: number | null;
+        pakets: {
+          nama_paket: string;
+          jenis: string | null;
+          kategori: string | null;
+          jumlah_pax: number | null;
+          foto1: string | null;
+        } | null;
+      }[]
+    | null;
+  pengirimans:
+    | {
+        status_kirim: "Sedang Dikirim" | "Tiba Ditujuan" | null;
+        tgl_tiba: string | null;
+        bukti_foto: string | null;
+      }[]
+    | null;
+};
+
+export default function PesananSayaPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [pesanans, setPesanans] = useState<PesananSaya[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchStats() {
-      setLoading(true);
-      try {
-        // Fetch total pesanan
-        const { count: countPesanan } = await supabase
-          .from("pesanans")
-          .select("*", { count: 'exact', head: true });
-          
-        // Fetch total pendapatan (sum of total_bayar where status is not Menunggu Konfirmasi... or just all for now)
-        const { data: pesanans } = await supabase
-          .from("pesanans")
-          .select("total_bayar");
-        
-        const totalPendapatan = pesanans?.reduce((sum, item) => sum + (item.total_bayar || 0), 0) || 0;
+  const fetchPesananSaya = useCallback(async (idPelanggan: number) => {
+    setLoading(true);
 
-        // Fetch total pelanggan
-        const { count: countPelanggan } = await supabase
-          .from("pelanggans")
-          .select("*", { count: 'exact', head: true });
+    try {
+      const { data, error } = await supabase
+        .from("pesanans")
+        .select(
+          `
+          id,
+          no_resi,
+          tgl_pesan,
+          status_pesan,
+          total_bayar,
+          jenis_pembayarans (
+            metode_pembayaran
+          ),
+          detail_pemesanans (
+            subtotal,
+            pakets (
+              nama_paket,
+              jenis,
+              kategori,
+              jumlah_pax,
+              foto1
+            )
+          ),
+          pengirimans (
+            status_kirim,
+            tgl_tiba,
+            bukti_foto
+          )
+        `
+        )
+        .eq("id_pelanggan", idPelanggan)
+        .order("tgl_pesan", { ascending: false });
 
-        // Fetch total paket
-        const { count: countPaket } = await supabase
-          .from("pakets")
-          .select("*", { count: 'exact', head: true });
+      if (error) throw error;
 
-        setStats({
-          totalPesanan: countPesanan || 0,
-          totalPendapatan,
-          totalPelanggan: countPelanggan || 0,
-          totalPaket: countPaket || 0,
-        });
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-      } finally {
-        setLoading(false);
-      }
+      setPesanans((data || []) as PesananSaya[]);
+    } catch (error) {
+      console.error("Error fetching pesanan pelanggan:", error);
+      setPesanans([]);
+    } finally {
+      setLoading(false);
     }
-
-    fetchStats();
   }, []);
 
-  if (loading) return <div>Memuat data statistik...</div>;
+  useEffect(() => {
+    const session = getSession();
+
+    if (!session) {
+      router.replace("/login");
+      return;
+    }
+
+    if (session.role !== "pelanggan") {
+      router.replace(getDashboardPath(session.role));
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void fetchPesananSaya(session.id).then(() => {
+        setUser(session);
+      });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [fetchPesananSaya, router]);
+
+  if (loading || !user) {
+    return <div>Memuat pesanan saya...</div>;
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Ringkasan Bisnis</h1>
-        <p className="text-muted-foreground">Selamat datang di panel kontrol Symphony Catering.</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Pesanan Saya</h1>
+          <p className="text-muted-foreground">
+            Daftar pesanan yang pernah Anda buat di Symphony Catering.
+          </p>
+        </div>
+
+        <Link
+          href="/#packages"
+          className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          Pesan Paket Lagi
+        </Link>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Stat Cards */}
-        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
-          <div className="flex flex-row items-center justify-between pb-2">
-            <h3 className="tracking-tight text-sm font-medium">Total Pesanan</h3>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <div className="text-2xl font-bold">{stats.totalPesanan}</div>
+      {pesanans.length === 0 ? (
+        <div className="bg-card border border-border rounded-2xl p-10 text-center shadow-sm">
+          <PackageOpen className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+          <h2 className="text-lg font-bold">Belum Ada Pesanan</h2>
+          <p className="text-muted-foreground mt-2">
+            Pesanan yang Anda buat nanti akan muncul di halaman ini.
+          </p>
         </div>
+      ) : (
+        <div className="space-y-4">
+          {pesanans.map((pesanan) => {
+            const detail = pesanan.detail_pemesanans?.[0];
+            const paket = detail?.pakets;
+            const pengiriman =
+              pesanan.status_pesan === "Menunggu Kurir"
+                ? pesanan.pengirimans?.[0]
+                : undefined;
+            const statusLabel =
+              pengiriman?.status_kirim === "Tiba Ditujuan"
+                ? "Pesanan Selesai"
+                : pesanan.status_pesan;
 
-        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
-          <div className="flex flex-row items-center justify-between pb-2">
-            <h3 className="tracking-tight text-sm font-medium">Total Pendapatan</h3>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <div className="text-2xl font-bold">Rp {stats.totalPendapatan.toLocaleString('id-ID')}</div>
-        </div>
+            return (
+              <article
+                key={pesanan.id}
+                className="bg-card border border-border rounded-2xl p-5 shadow-sm"
+              >
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex gap-4 min-w-0">
+                    <div className="h-20 w-20 shrink-0 rounded-xl overflow-hidden border border-border bg-secondary">
+                      {paket?.foto1 ? (
+                        <img
+                          src={paket.foto1}
+                          alt={paket.nama_paket}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center">
+                          <ReceiptText className="h-8 w-8 text-muted-foreground/40" />
+                        </div>
+                      )}
+                    </div>
 
-        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
-          <div className="flex flex-row items-center justify-between pb-2">
-            <h3 className="tracking-tight text-sm font-medium">Total Pelanggan</h3>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <div className="text-2xl font-bold">{stats.totalPelanggan}</div>
-        </div>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span className="text-xs font-bold text-muted-foreground">
+                          {pesanan.no_resi || `PESANAN-${pesanan.id}`}
+                        </span>
+                        <StatusBadge status={statusLabel} />
+                      </div>
 
-        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
-          <div className="flex flex-row items-center justify-between pb-2">
-            <h3 className="tracking-tight text-sm font-medium">Paket Aktif</h3>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <div className="text-2xl font-bold">{stats.totalPaket}</div>
+                      <h2 className="font-bold text-lg truncate">
+                        {paket?.nama_paket || "Paket tidak ditemukan"}
+                      </h2>
+
+                      <p className="text-sm text-muted-foreground">
+                        {[paket?.kategori, paket?.jenis, paket?.jumlah_pax ? `${paket.jumlah_pax} Pax` : null]
+                          .filter(Boolean)
+                          .join(" - ") || "Detail paket tidak tersedia"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[520px]">
+                    <InfoCell
+                      icon={<CalendarDays className="h-4 w-4" />}
+                      label="Tanggal Pesan"
+                      value={
+                        pesanan.tgl_pesan
+                          ? new Date(pesanan.tgl_pesan).toLocaleDateString("id-ID")
+                          : "-"
+                      }
+                    />
+                    <InfoCell
+                      icon={<CreditCard className="h-4 w-4" />}
+                      label="Pembayaran"
+                      value={pesanan.jenis_pembayarans?.metode_pembayaran || "-"}
+                    />
+                    <InfoCell
+                      icon={<ReceiptText className="h-4 w-4" />}
+                      label="Total"
+                      value={`Rp ${(pesanan.total_bayar || 0).toLocaleString("id-ID")}`}
+                    />
+                  </div>
+                </div>
+
+                {pengiriman?.bukti_foto && (
+                  <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+                    Pesanan sudah diantar
+                    {pengiriman.tgl_tiba
+                      ? ` pada ${new Date(pengiriman.tgl_tiba).toLocaleString("id-ID")}`
+                      : ""}
+                    .{" "}
+                    <a
+                      href={pengiriman.bukti_foto}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-bold underline"
+                    >
+                      Lihat bukti foto
+                    </a>
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </div>
+      )}
+    </div>
+  );
+}
+
+function StatusBadge({
+  status,
+}: {
+  status: PesananSaya["status_pesan"] | "Sedang Dikirim" | "Tiba Ditujuan" | "Pesanan Selesai";
+}) {
+  const label = status || "Menunggu Konfirmasi";
+  const className =
+    label === "Pesanan Selesai" || label === "Tiba Ditujuan"
+      ? "bg-green-100 text-green-800"
+      : label === "Menunggu Konfirmasi"
+      ? "bg-yellow-100 text-yellow-800"
+      : label === "Sedang Diproses"
+        ? "bg-blue-100 text-blue-800"
+        : "bg-indigo-100 text-indigo-800";
+
+  return (
+    <span className={`rounded-full px-3 py-1 text-xs font-bold ${className}`}>
+      {label}
+    </span>
+  );
+}
+
+function InfoCell({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl bg-secondary/60 p-3">
+      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        {icon}
+        {label}
       </div>
-      
-      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-        <h3 className="font-bold text-lg mb-4">Informasi Sistem</h3>
-        <p className="text-muted-foreground text-sm">
-          Sistem ini terhubung langsung dengan database Supabase. Semua perubahan pada pesanan, paket, dan pengiriman akan tersinkronisasi secara real-time. Gunakan menu di samping untuk mengelola data operasional.
-        </p>
-      </div>
+      <p className="mt-1 font-bold">{value}</p>
     </div>
   );
 }

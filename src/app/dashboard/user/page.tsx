@@ -3,9 +3,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Plus, Trash2 } from "lucide-react";
+import type { Database } from "@/types/database.types";
+
+type StaffUser = Database["public"]["Tables"]["users"]["Row"];
+type StaffLevel = NonNullable<StaffUser["level"]>;
 
 export default function KelolaUser() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<StaffUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   
@@ -13,7 +17,7 @@ export default function KelolaUser() {
     name: "",
     email: "",
     password: "",
-    level: "kurir"
+    level: "kurir" as StaffLevel,
   });
 
   useEffect(() => {
@@ -46,7 +50,7 @@ export default function KelolaUser() {
           name: formData.name,
           email: formData.email,
           password: formData.password,
-          level: formData.level
+          level: formData.level,
         }]);
       
       if (error) throw error;
@@ -54,8 +58,8 @@ export default function KelolaUser() {
       setFormData({ name: "", email: "", password: "", level: "kurir" });
       setIsAdding(false);
       fetchUsers();
-    } catch (error: any) {
-      alert("Gagal menambah user: " + error.message);
+    } catch (error) {
+      alert("Gagal menambah user: " + getErrorMessage(error));
     }
   }
 
@@ -65,7 +69,7 @@ export default function KelolaUser() {
       await supabase.from("users").delete().eq("id", id);
       fetchUsers();
     } catch (error) {
-      alert("Gagal menghapus.");
+      alert("Gagal menghapus: " + getErrorMessage(error));
     }
   }
 
@@ -124,7 +128,12 @@ export default function KelolaUser() {
               <select 
                 className="w-full p-2 border border-border rounded-lg"
                 value={formData.level}
-                onChange={(e) => setFormData({...formData, level: e.target.value})}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    level: e.target.value as StaffLevel,
+                  })
+                }
               >
                 <option value="admin">Admin</option>
                 <option value="owner">Owner</option>
@@ -163,7 +172,7 @@ export default function KelolaUser() {
                       u.level === 'owner' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-blue-100 text-blue-800'
                     }`}>
-                      {u.level.toUpperCase()}
+                      {(u.level || "kurir").toUpperCase()}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -179,4 +188,9 @@ export default function KelolaUser() {
       </div>
     </div>
   );
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return "Unknown error";
 }

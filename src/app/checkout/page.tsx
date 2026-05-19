@@ -1,12 +1,20 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Utensils } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
-import { getSession, type SessionUser } from "@/lib/auth";
+import { getDashboardPath, getSession, type SessionUser } from "@/lib/auth";
+import type { Database } from "@/types/database.types";
+
+type PelangganCheckout = Pick<
+  Database["public"]["Tables"]["pelanggans"]["Row"],
+  "id" | "nama_pelanggan" | "email" | "telepon" | "alamat1"
+>;
+type PaketCheckout = Database["public"]["Tables"]["pakets"]["Row"];
+type MetodePembayaran = Database["public"]["Tables"]["jenis_pembayarans"]["Row"];
 
 function CheckoutForm() {
   const router = useRouter();
@@ -14,45 +22,19 @@ function CheckoutForm() {
   const paketId = searchParams.get("paket_id");
 
   const [user, setUser] = useState<SessionUser | null>(null);
-  const [pelangganDetail, setPelangganDetail] = useState<any>(null);
-  const [paket, setPaket] = useState<any>(null);
-  const [metodePembayaran, setMetodePembayaran] = useState<any[]>([]);
+  const [pelangganDetail, setPelangganDetail] =
+    useState<PelangganCheckout | null>(null);
+  const [paket, setPaket] = useState<PaketCheckout | null>(null);
+  const [metodePembayaran, setMetodePembayaran] = useState<MetodePembayaran[]>(
+    []
+  );
   const [selectedMetode, setSelectedMetode] = useState<number | "">("");
 
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    const session = getSession();
-
-    if (!session) {
-      router.replace("/login");
-      return;
-    }
-
-    if (session.role !== "pelanggan") {
-      router.replace("/dashboard");
-      return;
-    }
-
-    if (!paketId) {
-      router.replace("/paket");
-      return;
-    }
-
-    const paketIdNumber = Number(paketId);
-
-    if (Number.isNaN(paketIdNumber)) {
-      router.replace("/paket");
-      return;
-    }
-
-    setUser(session);
-    fetchData(session.id, paketIdNumber);
-  }, [paketId, router]);
-
-  async function fetchData(idPelanggan: number, selectedPaketId: number) {
+  const fetchData = useCallback(async (idPelanggan: number, selectedPaketId: number) => {
     setLoading(true);
 
     try {
@@ -90,14 +72,48 @@ function CheckoutForm() {
       if (metodeData && metodeData.length > 0) {
         setSelectedMetode(metodeData[0].id);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("CHECKOUT FETCH ERROR:", error);
-      alert(error?.message || "Gagal memuat data checkout.");
+      alert(getErrorMessage(error) || "Gagal memuat data checkout.");
       router.replace("/paket");
     } finally {
       setLoading(false);
     }
-  }
+  }, [router]);
+
+  useEffect(() => {
+    const session = getSession();
+
+    if (!session) {
+      router.replace("/login");
+      return;
+    }
+
+    if (session.role !== "pelanggan") {
+      router.replace(getDashboardPath(session.role));
+      return;
+    }
+
+    if (!paketId) {
+      router.replace("/paket");
+      return;
+    }
+
+    const paketIdNumber = Number(paketId);
+
+    if (Number.isNaN(paketIdNumber)) {
+      router.replace("/paket");
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void fetchData(session.id, paketIdNumber).then(() => {
+        setUser(session);
+      });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [fetchData, paketId, router]);
 
   const handleCheckout = async () => {
     if (!user) {
@@ -150,9 +166,9 @@ function CheckoutForm() {
       if (detailError) throw detailError;
 
       setSuccess(true);
-    } catch (error: any) {
+    } catch (error) {
       console.error("CHECKOUT ERROR:", error);
-      alert("Gagal memproses pesanan: " + (error?.message || "Unknown error"));
+      alert("Gagal memproses pesanan: " + getErrorMessage(error));
     } finally {
       setProcessing(false);
     }
@@ -330,6 +346,11 @@ function CheckoutForm() {
       </div>
     </div>
   );
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return "Unknown error";
 }
 
 export default function CheckoutPage() {

@@ -2,17 +2,67 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Truck } from "lucide-react";
+import type { ReactNode } from "react";
+import { Camera, CheckCircle2, Clock, ImageIcon, Truck } from "lucide-react";
 
-import { supabase } from "@/lib/supabase";
 import { getSession, type SessionUser } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
+
+type StatusKirim = "Sedang Dikirim" | "Tiba Ditujuan";
+
+type PengirimanRow = {
+  id: number;
+  tgl_kirim: string | null;
+  tgl_tiba: string | null;
+  status_kirim: StatusKirim | null;
+  bukti_foto: string | null;
+  id_user: number | null;
+  pesanans: {
+    id: number;
+    no_resi: string | null;
+    status_pesan: string | null;
+    total_bayar: number | null;
+    pelanggans: {
+      nama_pelanggan: string | null;
+      alamat1: string | null;
+      telepon: string | null;
+    } | null;
+    detail_pemesanans:
+      | {
+          pakets: {
+            nama_paket: string;
+            jumlah_pax: number | null;
+          } | null;
+        }[]
+      | null;
+  } | null;
+  users: {
+    id: number;
+    name: string;
+    email: string;
+    level: string | null;
+  } | null;
+};
+
+type KurirRow = {
+  id: number;
+  name: string;
+};
+
+type PesananForPengiriman = {
+  id: number;
+  tgl_pesan: string | null;
+  status_pesan: string | null;
+};
 
 export default function PengirimanDashboard() {
   const router = useRouter();
 
   const [user, setUser] = useState<SessionUser | null>(null);
-  const [pengirimans, setPengirimans] = useState<any[]>([]);
-  const [kurirs, setKurirs] = useState<any[]>([]);
+  const [pengirimans, setPengirimans] = useState<PengirimanRow[]>([]);
+  const [kurirs, setKurirs] = useState<KurirRow[]>([]);
+  const [proofFiles, setProofFiles] = useState<Record<number, File | null>>({});
+  const [submittingId, setSubmittingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,19 +78,23 @@ export default function PengirimanDashboard() {
       return;
     }
 
-    setUser(session);
-    fetchPengiriman(session);
+    const timer = window.setTimeout(() => {
+      setUser(session);
+      void fetchPengiriman(session);
 
-    if (session.role === "admin" || session.role === "owner") {
-      fetchKurirs();
-    }
+      if (session.role === "admin" || session.role === "owner") {
+        void fetchKurirs();
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [router]);
 
   async function fetchKurirs() {
     try {
       const { data, error } = await supabase
         .from("users")
-        .select("*")
+        .select("id, name")
         .eq("level", "kurir")
         .order("name", { ascending: true });
 
@@ -56,11 +110,14 @@ export default function PengirimanDashboard() {
     setLoading(true);
 
     try {
+      await syncMissingPengirimanRecords();
+
       let query = supabase
         .from("pengirimans")
-        .select(`
+        .select(
+          `
           *,
-          pesanans (
+          pesanans!inner (
             id,
             no_resi,
             status_pesan,
@@ -69,6 +126,12 @@ export default function PengirimanDashboard() {
               nama_pelanggan,
               alamat1,
               telepon
+            ),
+            detail_pemesanans (
+              pakets (
+                nama_paket,
+                jumlah_pax
+              )
             )
           ),
           users (
@@ -77,24 +140,63 @@ export default function PengirimanDashboard() {
             email,
             level
           )
-        `)
+        `
+        )
+        .eq("pesanans.status_pesan", "Menunggu Kurir")
         .order("created_at", { ascending: false });
 
       if (currentUser.role === "kurir") {
-        query = query.eq("id_user", currentUser.id);
+        query = query.or(`id_user.is.null,id_user.eq.${currentUser.id}`);
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
 
-      setPengirimans(data || []);
+      setPengirimans((data || []) as PengirimanRow[]);
     } catch (error) {
       console.error("Error fetching pengiriman:", error);
       setPengirimans([]);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function syncMissingPengirimanRecords() {
+    const [{ data: pesanans, error: pesananError }, { data: pengirimans, error: pengirimanError }] =
+      await Promise.all([
+        supabase
+          .from("pesanans")
+          .select("id, tgl_pesan, status_pesan")
+          .eq("status_pesan", "Menunggu Kurir"),
+        supabase.from("pengirimans").select("id_pesan"),
+      ]);
+
+    if (pesananError) throw pesananError;
+    if (pengirimanError) throw pengirimanError;
+
+    const existingPesananIds = new Set(
+      (pengirimans || []).map((pengiriman) => pengiriman.id_pesan)
+    );
+
+    const missingPengirimans = ((pesanans || []) as PesananForPengiriman[])
+      .filter((pesanan) => !existingPesananIds.has(pesanan.id))
+      .map((pesanan) => ({
+        id_pesan: pesanan.id,
+        id_user: null,
+        status_kirim: "Sedang Dikirim" as const,
+        tgl_kirim: new Date().toISOString(),
+        tgl_tiba: null,
+        bukti_foto: null,
+      }));
+
+    if (missingPengirimans.length === 0) return;
+
+    const { error } = await supabase
+      .from("pengirimans")
+      .insert(missingPengirimans);
+
+    if (error) throw error;
   }
 
   async function assignKurir(idPengiriman: number, idKurir: string) {
@@ -116,44 +218,113 @@ export default function PengirimanDashboard() {
 
       if (error) throw error;
 
-      fetchPengiriman(user);
-    } catch (error: any) {
-      alert("Gagal assign kurir: " + error.message);
+      await fetchPengiriman(user);
+    } catch (error) {
+      alert("Gagal assign kurir: " + getErrorMessage(error));
     }
   }
 
-  async function updateStatus(idPengiriman: number, newStatus: string) {
+  async function uploadBukti(file: File, idPengiriman: number) {
+    const fileExt = file.name.split(".").pop() || "jpg";
+    const fileName = `${Date.now()}-${idPengiriman}.${fileExt}`;
+    const filePath = `bukti-pengiriman/${fileName}`;
+
+    const { error } = await supabase.storage
+      .from("paket-images")
+      .upload(filePath, file, { upsert: true });
+
+    if (error) throw error;
+
+    const { data } = supabase.storage
+      .from("paket-images")
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  }
+
+  async function konfirmasiTiba(pengiriman: PengirimanRow) {
     if (!user) return;
 
-    if (user.role !== "kurir" && user.role !== "admin") {
-      alert("Anda tidak punya akses update pengiriman.");
+    if (user.role !== "kurir") {
+      alert("Hanya kurir yang boleh mengonfirmasi pengiriman.");
       return;
     }
 
+    const proofFile = proofFiles[pengiriman.id];
+
+    if (!proofFile && !pengiriman.bukti_foto) {
+      alert("Upload foto bukti pengiriman terlebih dahulu.");
+      return;
+    }
+
+    setSubmittingId(pengiriman.id);
+
     try {
-      const updates: any = {
-        status_kirim: newStatus,
-        updated_at: new Date().toISOString(),
-      };
+      let buktiFotoUrl = pengiriman.bukti_foto;
 
-      if (newStatus === "Sedang Dikirim") {
-        updates.tgl_kirim = new Date().toISOString();
-      }
-
-      if (newStatus === "Tiba Ditujuan") {
-        updates.tgl_tiba = new Date().toISOString();
+      if (proofFile) {
+        buktiFotoUrl = await uploadBukti(proofFile, pengiriman.id);
       }
 
       const { error } = await supabase
         .from("pengirimans")
-        .update(updates)
-        .eq("id", idPengiriman);
+        .update({
+          id_user: pengiriman.id_user || user.id,
+          bukti_foto: buktiFotoUrl,
+          status_kirim: "Tiba Ditujuan",
+          tgl_tiba: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", pengiriman.id);
 
       if (error) throw error;
 
-      fetchPengiriman(user);
-    } catch (error: any) {
-      alert("Gagal update status: " + error.message);
+      setProofFiles((current) => ({
+        ...current,
+        [pengiriman.id]: null,
+      }));
+
+      await fetchPengiriman(user);
+      alert("Pengiriman berhasil dikonfirmasi.");
+    } catch (error) {
+      alert("Gagal konfirmasi pengiriman: " + getErrorMessage(error));
+    } finally {
+      setSubmittingId(null);
+    }
+  }
+
+  async function konfirmasiSelesaiAdmin(pengiriman: PengirimanRow) {
+    if (!user) return;
+
+    if (user.role !== "admin") {
+      alert("Hanya admin yang boleh mengonfirmasi pesanan selesai.");
+      return;
+    }
+
+    if (pengiriman.status_kirim !== "Tiba Ditujuan" || !pengiriman.bukti_foto) {
+      alert("Bukti foto dari kurir belum tersedia.");
+      return;
+    }
+
+    if (!pengiriman.pesanans?.id) {
+      alert("Data pesanan tidak ditemukan.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("pesanans")
+        .update({
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", pengiriman.pesanans.id);
+
+      if (error) throw error;
+
+      alert("Pesanan berhasil dikonfirmasi selesai.");
+      router.push("/dashboard/pesanan");
+    } catch (error) {
+      alert("Gagal konfirmasi pesanan selesai: " + getErrorMessage(error));
     }
   }
 
@@ -169,78 +340,84 @@ export default function PengirimanDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
-          Tugas Pengiriman
+          {user.role === "kurir" ? "Invoice Pengiriman" : "Status Pengiriman"}
         </h1>
         <p className="text-muted-foreground">
-          Kelola dan pantau status pengiriman pesanan.
+          {user.role === "kurir"
+            ? "Ambil tugas pengiriman, upload bukti, lalu konfirmasi saat pesanan sudah diantar."
+            : "Pantau tugas kurir, assign pengiriman, dan lihat bukti pesanan yang sudah diantar."}
         </p>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs text-muted-foreground uppercase bg-secondary/50 border-b border-border">
-              <tr>
-                <th className="px-6 py-4 font-medium">No. Resi Pesanan</th>
-                <th className="px-6 py-4 font-medium">Tujuan</th>
-                <th className="px-6 py-4 font-medium">Waktu Kirim</th>
+      {pengirimans.length === 0 ? (
+        <div className="bg-card border border-border rounded-2xl p-10 text-center shadow-sm">
+          <Truck className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+          <h2 className="text-lg font-bold">Belum Ada Jadwal Pengiriman</h2>
+          <p className="text-muted-foreground mt-2">
+            Invoice dari pesanan pelanggan akan muncul di sini.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {pengirimans.map((p) => {
+            const paket = p.pesanans?.detail_pemesanans?.[0]?.pakets;
 
-                {user.role !== "kurir" && (
-                  <th className="px-6 py-4 font-medium">Assign Kurir</th>
-                )}
-
-                <th className="px-6 py-4 font-medium">Status Pengiriman</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {pengirimans.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={user.role === "kurir" ? 4 : 5}
-                    className="px-6 py-8 text-center text-muted-foreground"
-                  >
-                    <div className="flex flex-col items-center">
-                      <Truck className="h-10 w-10 text-muted-foreground/30 mb-2" />
-                      Belum ada jadwal pengiriman.
+            return (
+              <article
+                key={p.id}
+                className="bg-card border border-border rounded-2xl p-5 shadow-sm"
+              >
+                <div className="grid gap-5 xl:grid-cols-[1fr_320px] xl:items-start">
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-bold text-muted-foreground">
+                        {p.pesanans?.no_resi || `PENGIRIMAN-${p.id}`}
+                      </span>
+                      <StatusBadge status={p.status_kirim} />
                     </div>
-                  </td>
-                </tr>
-              ) : (
-                pengirimans.map((p) => (
-                  <tr
-                    key={p.id}
-                    className="border-b border-border hover:bg-secondary/20"
-                  >
-                    <td className="px-6 py-4 font-bold text-primary">
-                      {p.pesanans?.no_resi || "-"}
-                    </td>
 
-                    <td className="px-6 py-4">
-                      <p className="font-bold">
-                        {p.pesanans?.pelanggans?.nama_pelanggan || "-"}
+                    <div>
+                      <h2 className="text-lg font-bold">
+                        {paket?.nama_paket || "Paket tidak ditemukan"}
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        {paket?.jumlah_pax ? `${paket.jumlah_pax} Pax` : "Jumlah pax belum tersedia"} - Rp{" "}
+                        {(p.pesanans?.total_bayar || 0).toLocaleString("id-ID")}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {p.pesanans?.pelanggans?.alamat1 || "-"}
-                      </p>
-                      <p className="text-xs text-primary">
-                        {p.pesanans?.pelanggans?.telepon || "-"}
-                      </p>
-                    </td>
+                    </div>
 
-                    <td className="px-6 py-4">
-                      {p.tgl_kirim
-                        ? new Date(p.tgl_kirim).toLocaleString("id-ID")
-                        : "-"}
-                    </td>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <InfoBox label="Pelanggan" value={p.pesanans?.pelanggans?.nama_pelanggan || "-"} />
+                      <InfoBox label="Telepon" value={p.pesanans?.pelanggans?.telepon || "-"} />
+                      <InfoBox label="Alamat" value={p.pesanans?.pelanggans?.alamat1 || "-"} />
+                    </div>
 
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <InfoBox
+                        label="Waktu Masuk"
+                        value={p.tgl_kirim ? new Date(p.tgl_kirim).toLocaleString("id-ID") : "-"}
+                        icon={<Clock className="h-4 w-4" />}
+                      />
+                      <InfoBox
+                        label="Waktu Tiba"
+                        value={p.tgl_tiba ? new Date(p.tgl_tiba).toLocaleString("id-ID") : "-"}
+                        icon={<CheckCircle2 className="h-4 w-4" />}
+                      />
+                      <InfoBox label="Kurir" value={p.users?.name || "Belum diassign"} />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
                     {user.role !== "kurir" && (
-                      <td className="px-6 py-4 font-medium">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Assign Kurir
+                        </label>
                         <select
-                          className="w-full p-2 border border-border rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary text-xs"
+                          className="w-full p-3 border border-border rounded-xl bg-background outline-none focus:ring-2 focus:ring-primary text-sm"
                           value={p.id_user || ""}
                           onChange={(e) => assignKurir(p.id, e.target.value)}
-                          disabled={user.role !== "admin"}
+                          disabled={user.role !== "admin" || p.status_kirim === "Tiba Ditujuan"}
                         >
                           <option value="">Belum Diassign</option>
 
@@ -250,39 +427,119 @@ export default function PengirimanDashboard() {
                             </option>
                           ))}
                         </select>
-                      </td>
+                      </div>
                     )}
 
-                    <td className="px-6 py-4">
-                      {p.status_kirim === "Tiba Ditujuan" ? (
-                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">
-                          Tiba Ditujuan
-                        </span>
+                    <div className="rounded-2xl border border-border p-4 space-y-3">
+                      <div className="flex items-center gap-2 font-bold">
+                        <Camera className="h-4 w-4" />
+                        Bukti Pengiriman
+                      </div>
+
+                      {p.bukti_foto ? (
+                        <a href={p.bukti_foto} target="_blank" rel="noreferrer">
+                          <img
+                            src={p.bukti_foto}
+                            alt="Bukti pengiriman"
+                            className="h-40 w-full rounded-xl object-cover border border-border"
+                          />
+                        </a>
                       ) : (
-                        <select
-                          className="bg-blue-100 text-blue-800 text-xs font-bold rounded-full px-3 py-1.5 border-none outline-none cursor-pointer"
-                          value={p.status_kirim || "Sedang Dikirim"}
-                          onChange={(e) => updateStatus(p.id, e.target.value)}
-                          disabled={
-                            user.role !== "kurir" && user.role !== "admin"
-                          }
-                        >
-                          <option value="Sedang Dikirim">
-                            Sedang Dikirim
-                          </option>
-                          <option value="Tiba Ditujuan">
-                            Tiba Ditujuan
-                          </option>
-                        </select>
+                        <div className="h-32 rounded-xl bg-secondary flex items-center justify-center border border-border">
+                          <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                        </div>
                       )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+
+                      {user.role !== "kurir" && p.status_kirim !== "Tiba Ditujuan" && (
+                        <div className="rounded-xl bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
+                          Menunggu kurir mengantar pesanan dan mengupload bukti foto.
+                        </div>
+                      )}
+
+                      {user.role !== "kurir" && p.status_kirim === "Tiba Ditujuan" && (
+                        <button
+                          type="button"
+                          onClick={() => konfirmasiSelesaiAdmin(p)}
+                          className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90"
+                        >
+                          Konfirmasi Pesanan Selesai
+                        </button>
+                      )}
+
+                      {user.role === "kurir" && p.status_kirim !== "Tiba Ditujuan" && (
+                        <>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="w-full text-sm"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0] || null;
+                              setProofFiles((current) => ({
+                                ...current,
+                                [p.id]: file,
+                              }));
+                            }}
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() => konfirmasiTiba(p)}
+                            disabled={submittingId === p.id}
+                            className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                          >
+                            {submittingId === p.id
+                              ? "Mengirim konfirmasi..."
+                              : "Konfirmasi Sudah Diantar"}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
-      </div>
+      )}
     </div>
   );
+}
+
+function StatusBadge({ status }: { status: StatusKirim | null }) {
+  const label = status || "Sedang Dikirim";
+  const className =
+    label === "Tiba Ditujuan"
+      ? "bg-green-100 text-green-800"
+      : "bg-blue-100 text-blue-800";
+
+  return (
+    <span className={`rounded-full px-3 py-1 text-xs font-bold ${className}`}>
+      {label}
+    </span>
+  );
+}
+
+function InfoBox({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string;
+  icon?: ReactNode;
+}) {
+  return (
+    <div className="rounded-xl bg-secondary/60 p-3 min-w-0">
+      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        {icon}
+        {label}
+      </div>
+      <p className="mt-1 font-bold truncate">{value}</p>
+    </div>
+  );
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return "Unknown error";
 }
