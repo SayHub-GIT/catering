@@ -95,34 +95,35 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-secondary/30 p-4 py-12">
-      <div className="w-full max-w-md bg-card p-8 rounded-2xl shadow-lg border border-border">
-        <div className="flex justify-center mb-6">
-          <div className="bg-primary text-primary-foreground p-3 rounded-2xl">
-            <Utensils className="h-8 w-8" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#8ED8F8] to-[#F5E6C8] p-4 py-12">
+      <div className="w-full max-w-md minecraft-card p-8 space-y-6">
+        <div className="flex justify-center">
+          <div className="bg-[#3FA34D] text-[#FFF8E7] p-4 border-2 border-[#3b2f2f] shadow-[3px_3px_0px_#2b2b2b]">
+            <span className="text-3xl">📝</span>
           </div>
         </div>
 
-        <h2 className="text-2xl font-bold text-center mb-6">
+        <h2 className="text-3xl font-bold text-center text-[#1F2933]">
           Buat Akun Baru
         </h2>
 
         {error && (
-          <div className="bg-red-100 text-red-600 p-3 rounded-lg mb-4 text-sm text-center">
-            {error}
+          <div className="bg-[#DC2626] text-[#FFF8E7] p-3 border-2 border-[#3b2f2f] text-sm text-center font-semibold shadow-[2px_2px_0px_#2b2b2b]">
+            ⚠️ {error}
           </div>
         )}
 
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Nama Lengkap
+            <label className="block text-sm font-bold mb-2 text-[#1F2933]">
+              👤 Nama Lengkap
             </label>
 
             <input
               type="text"
               required
-              className="w-full p-3 border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all"
+              placeholder="Masukkan nama Anda"
+              className="minecraft-input w-full"
               value={formData.nama_pelanggan}
               onChange={(e) =>
                 setFormData({
@@ -134,14 +135,15 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Email
+            <label className="block text-sm font-bold mb-2 text-[#1F2933]">
+              📧 Email
             </label>
 
             <input
               type="email"
               required
-              className="w-full p-3 border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all"
+              placeholder="nama@example.com"
+              className="minecraft-input w-full"
               value={formData.email}
               onChange={(e) =>
                 setFormData({
@@ -153,15 +155,16 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Password
+            <label className="block text-sm font-bold mb-2 text-[#1F2933]">
+              🔑 Password (min 6 karakter)
             </label>
 
             <input
               type="password"
               required
               minLength={6}
-              className="w-full p-3 border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all"
+              placeholder="••••••••"
+              className="minecraft-input w-full"
               value={formData.password}
               onChange={(e) =>
                 setFormData({
@@ -173,14 +176,15 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
-              No. Telepon / WhatsApp
+            <label className="block text-sm font-bold mb-2 text-[#1F2933]">
+              📱 No. Telepon / WhatsApp
             </label>
 
             <input
               type="text"
               required
-              className="w-full p-3 border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all"
+              placeholder="08xx-xxxx-xxxx"
+              className="minecraft-input w-full"
               value={formData.telepon}
               onChange={(e) =>
                 setFormData({
@@ -192,13 +196,14 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Alamat Lengkap (Utama)
+            <label className="block text-sm font-bold mb-2 text-[#1F2933]">
+              📍 Alamat Lengkap
             </label>
 
             <textarea
               required
-              className="w-full p-3 border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all min-h-[100px]"
+              placeholder="Jalan, RT/RW, Kelurahan, Kecamatan, Kota"
+              className="minecraft-input w-full min-h-[100px] resize-none"
               value={formData.alamat1}
               onChange={(e) =>
                 setFormData({
@@ -212,15 +217,15 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary text-primary-foreground p-3 rounded-xl font-bold hover:bg-primary/90 transition-all disabled:opacity-50"
+            className="minecraft-button-primary w-full mt-6 disabled:opacity-50 text-base py-3"
           >
-            {loading ? "Memproses..." : "Daftar Akun"}
+            {loading ? "⏳ Memproses..." : "✅ Daftar Akun"}
           </button>
         </form>
 
-        <p className="text-center mt-6 text-sm text-muted-foreground">
+        <p className="text-center text-sm text-[#6B7280] border-t-2 border-[#D4AF84] pt-4">
           Sudah punya akun?{" "}
-          <Link href="/login" className="text-primary font-bold">
+          <Link href="/login" className="text-[#3FA34D] font-bold hover:text-[#2E7D32] transition-colors">
             Masuk di sini
           </Link>
         </p>

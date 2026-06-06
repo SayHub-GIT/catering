@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Utensils } from "lucide-react";
+import { UtensilsCrossed } from "lucide-react";
 
 import { getSession, logout } from "@/lib/auth";
 
@@ -25,30 +25,30 @@ export default function Navbar() {
   }, []);
 
   return (
-    <header className="px-6 lg:px-14 h-20 flex items-center border-b border-border/40 backdrop-blur-md sticky top-0 z-50 bg-background/80">
+    <header className="px-6 lg:px-14 h-20 flex items-center border-b-4 border-[#3b2f2f] backdrop-blur-md sticky top-0 z-50 bg-[#A47148] shadow-[0_4px_0px_#2b2b2b]">
       
       {/* LOGO */}
       <Link className="flex items-center justify-center gap-2" href="/">
-        <div className="bg-primary text-primary-foreground p-2 rounded-xl">
-          <Utensils className="h-6 w-6" />
+        <div className="bg-[#3FA34D] text-[#FFF8E7] p-2 border-2 border-[#3b2f2f] shadow-[3px_3px_0px_#2b2b2b]">
+          <UtensilsCrossed className="h-6 w-6" />
         </div>
 
-        <span className="font-bold text-2xl tracking-tight">
-          Symphony
+        <span className="font-bold text-2xl tracking-tight text-[#FFF8E7]">
+          Catering-In
         </span>
       </Link>
 
       {/* MENU */}
-      <nav className="ml-auto hidden md:flex gap-6 sm:gap-8 text-sm font-medium">
+      <nav className="ml-auto hidden md:flex gap-6 sm:gap-8 text-sm font-bold text-[#FFF8E7]">
         <Link
-          className="hover:text-primary transition-colors"
+          className="hover:text-[#F5E6C8] transition-colors"
           href="/#packages"
         >
           Paket Menu
         </Link>
 
         <Link
-          className="hover:text-primary transition-colors"
+          className="hover:text-[#F5E6C8] transition-colors"
           href="/#about"
         >
           Tentang Kami
@@ -56,32 +56,32 @@ export default function Navbar() {
       </nav>
 
       {/* RIGHT SIDE */}
-      <div className="ml-8 flex items-center gap-4">
+      <div className="ml-8 flex items-center gap-3">
 
         {!user ? (
           <>
             <Link
               href="/login"
-              className="px-5 py-2.5 text-sm font-medium rounded-full hover:bg-secondary transition-colors"
+              className="minecraft-button bg-[#6B7280] text-[#FFF8E7] hover:-translate-y-1 text-sm px-3 py-1.5"
             >
               Masuk
             </Link>
 
             <Link
               href="/register"
-              className="px-5 py-2.5 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="minecraft-button-primary text-sm px-3 py-1.5"
             >
               Daftar
             </Link>
           </>
         ) : (
           <>
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold">
+            <div className="text-right hidden sm:block text-[#FFF8E7]">
+              <p className="text-xs font-bold">
                 {user.nama}
               </p>
 
-              <p className="text-xs text-muted-foreground capitalize">
+              <p className="text-xs capitalize font-medium">
                 {user.role}
               </p>
             </div>
@@ -94,14 +94,14 @@ export default function Navbar() {
                   ? "/dashboard/pengiriman"
                   : "/dashboard"
               }
-              className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm"
+              className="minecraft-button-primary text-sm px-3 py-1.5"
             >
               Dashboard
             </Link>
 
             <button
               onClick={logout}
-              className="px-4 py-2 rounded-full bg-red-500 text-white text-sm"
+              className="minecraft-button-danger text-sm px-3 py-1.5"
             >
               Logout
             </button>

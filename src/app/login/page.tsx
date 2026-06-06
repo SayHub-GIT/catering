@@ -149,9 +149,9 @@ export default function Login() {
   // =========================
   if (checkingSession) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground text-sm">
-          Memuat...
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#8ED8F8] to-[#F5E6C8]">
+        <p className="text-[#1F2933] font-bold">
+          ⏳ Memuat...
         </p>
       </div>
     );
@@ -161,26 +161,26 @@ export default function Login() {
   // UI
   // =========================
   return (
-    <div className="min-h-screen flex items-center justify-center bg-secondary/30 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#8ED8F8] to-[#F5E6C8] p-4">
 
-      <div className="w-full max-w-md bg-card p-8 rounded-2xl shadow-lg border border-border">
+      <div className="w-full max-w-md minecraft-card p-8 space-y-6">
 
         {/* ICON */}
-        <div className="flex justify-center mb-6">
-          <div className="bg-primary text-primary-foreground p-3 rounded-2xl">
-            <Utensils className="h-8 w-8" />
+        <div className="flex justify-center">
+          <div className="bg-[#3FA34D] text-[#FFF8E7] p-4 border-2 border-[#3b2f2f] shadow-[3px_3px_0px_#2b2b2b]">
+            <span className="text-3xl">🔓</span>
           </div>
         </div>
 
         {/* TITLE */}
-        <h2 className="text-2xl font-bold text-center mb-6">
-          Selamat Datang Kembali
+        <h2 className="text-3xl font-bold text-center text-[#1F2933]">
+          Selamat Datang
         </h2>
 
         {/* ERROR */}
         {error && (
-          <div className="bg-red-100 text-red-600 p-3 rounded-lg mb-4 text-sm text-center">
-            {error}
+          <div className="bg-[#DC2626] text-[#FFF8E7] p-3 border-2 border-[#3b2f2f] text-sm text-center font-semibold shadow-[2px_2px_0px_#2b2b2b]">
+            ⚠️ {error}
           </div>
         )}
 
@@ -192,26 +192,26 @@ export default function Login() {
 
           {/* EMAIL */}
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Email
+            <label className="block text-sm font-bold mb-2 text-[#1F2933]">
+              📧 Email
             </label>
 
             <input
               type="email"
               required
-              placeholder="Masukkan email anda"
+              placeholder="nama@example.com"
               value={email}
               onChange={(e) =>
                 setEmail(e.target.value)
               }
-              className="w-full p-3 border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all"
+              className="minecraft-input w-full"
             />
           </div>
 
           {/* PASSWORD */}
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Password
+            <label className="block text-sm font-bold mb-2 text-[#1F2933]">
+              🔑 Password
             </label>
 
             <input
@@ -222,7 +222,7 @@ export default function Login() {
               onChange={(e) =>
                 setPassword(e.target.value)
               }
-              className="w-full p-3 border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all"
+              className="minecraft-input w-full"
             />
           </div>
 
@@ -230,21 +230,21 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary text-primary-foreground p-3 rounded-xl font-bold hover:bg-primary/90 transition-all disabled:opacity-50"
+            className="minecraft-button-primary w-full mt-6 disabled:opacity-50 text-base py-3"
           >
             {loading
-              ? "Memproses..."
-              : "Masuk"}
+              ? "⏳ Memproses..."
+              : "✅ Masuk"}
           </button>
         </form>
 
         {/* FOOTER */}
-        <p className="text-center mt-6 text-sm text-muted-foreground">
+        <p className="text-center text-sm text-[#6B7280] border-t-2 border-[#D4AF84] pt-4">
           Belum punya akun?{" "}
 
           <Link
             href="/register"
-            className="text-primary font-bold"
+            className="text-[#3FA34D] font-bold hover:text-[#2E7D32] transition-colors"
           >
             Daftar sekarang
           </Link>

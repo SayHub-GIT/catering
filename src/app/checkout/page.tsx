@@ -3,7 +3,6 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Utensils } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
 import { getDashboardPath, getSession, type SessionUser } from "@/lib/auth";
@@ -175,31 +174,31 @@ function CheckoutForm() {
   };
 
   if (loading) {
-    return <div className="p-8 text-center">Memuat data checkout...</div>;
+    return <div className="p-8 text-center text-[#1F2933] font-bold">⏳ Memuat data checkout...</div>;
   }
 
   if (!paket) {
-    return <div className="p-8 text-center">Paket tidak ditemukan.</div>;
+    return <div className="p-8 text-center text-[#1F2933] font-bold">❌ Paket tidak ditemukan.</div>;
   }
 
   if (success) {
     return (
-      <div className="bg-card p-8 rounded-3xl border border-border text-center space-y-6 max-w-md mx-auto mt-12 shadow-sm">
+      <div className="minecraft-card p-8 text-center space-y-6 max-w-md mx-auto mt-12 shadow-[6px_6px_0px_#2b2b2b]">
         <div className="flex justify-center">
-          <CheckCircle2 className="h-20 w-20 text-green-500" />
+          <div className="text-6xl">✅</div>
         </div>
 
-        <h2 className="text-2xl font-bold">Pesanan Berhasil!</h2>
+        <h2 className="text-3xl font-bold text-[#1F2933]">Pesanan Berhasil!</h2>
 
-        <p className="text-muted-foreground">
+        <p className="text-[#6B7280] font-semibold">
           Pesanan Anda telah kami terima dan sedang menunggu konfirmasi dari admin.
         </p>
 
         <Link
           href="/dashboard/pelanggan"
-          className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold hover:bg-primary/90 transition-all inline-block w-full"
+          className="minecraft-button-primary py-3 inline-block w-full text-base"
         >
-          Lihat Status Pesanan
+          ✨ Lihat Status Pesanan
         </Link>
       </div>
     );
@@ -210,64 +209,64 @@ function CheckoutForm() {
       <div className="flex items-center gap-4">
         <button
           onClick={() => router.back()}
-          className="p-2 hover:bg-secondary rounded-full transition-colors"
+          className="p-2 hover:bg-[#D4AF84] transition-colors border-2 border-[#3b2f2f] text-[#1F2933] font-bold"
           type="button"
         >
-          <ArrowLeft className="h-5 w-5" />
+          ← Kembali
         </button>
 
-        <h1 className="text-2xl font-bold tracking-tight">
-          Checkout Pemesanan
+        <h1 className="text-2xl font-bold tracking-tight text-[#1F2933]">
+          🛒 Checkout Pemesanan
         </h1>
       </div>
 
       <div className="grid md:grid-cols-3 gap-8">
         <div className="md:col-span-2 space-y-6">
-          <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
-            <h2 className="text-lg font-bold mb-4 border-b border-border pb-2">
-              Informasi Pemesan
+          <div className="minecraft-card p-6 space-y-4">
+            <h2 className="text-lg font-bold border-b-2 border-[#D4AF84] pb-2 text-[#1F2933]">
+              👤 Informasi Pemesan
             </h2>
 
-            <div className="space-y-2 text-sm">
+            <div className="space-y-3 text-sm text-[#1F2933] font-semibold">
               <p>
-                <span className="text-muted-foreground w-24 inline-block">Nama</span>
-                : <span className="font-medium">{pelangganDetail?.nama_pelanggan || "-"}</span>
+                <span className="text-[#6B7280] w-24 inline-block">Nama</span>
+                : {pelangganDetail?.nama_pelanggan || "-"}
               </p>
 
               <p>
-                <span className="text-muted-foreground w-24 inline-block">Telepon</span>
-                : <span className="font-medium">{pelangganDetail?.telepon || "-"}</span>
+                <span className="text-[#6B7280] w-24 inline-block">Telepon</span>
+                : {pelangganDetail?.telepon || "-"}
               </p>
 
               <p>
-                <span className="text-muted-foreground w-24 inline-block">Alamat</span>
-                : <span className="font-medium">{pelangganDetail?.alamat1 || "-"}</span>
+                <span className="text-[#6B7280] w-24 inline-block">Alamat</span>
+                : {pelangganDetail?.alamat1 || "-"}
               </p>
             </div>
 
-            <p className="text-xs text-yellow-600 bg-yellow-50 p-3 rounded-lg mt-4 border border-yellow-200">
-              *Pastikan alamat Anda sudah benar untuk keperluan pengiriman.
+            <p className="text-xs text-[#DC2626] bg-[#FEE2E2] p-3 border-2 border-[#DC2626] font-bold">
+              ⚠️ Pastikan alamat Anda sudah benar untuk keperluan pengiriman.
             </p>
           </div>
 
-          <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
-            <h2 className="text-lg font-bold mb-4 border-b border-border pb-2">
-              Metode Pembayaran
+          <div className="minecraft-card p-6 space-y-4">
+            <h2 className="text-lg font-bold border-b-2 border-[#D4AF84] pb-2 text-[#1F2933]">
+              💳 Metode Pembayaran
             </h2>
 
             {metodePembayaran.length === 0 ? (
-              <p className="text-sm text-red-500">
-                Belum ada metode pembayaran.
+              <p className="text-sm text-[#DC2626] font-bold">
+                ❌ Belum ada metode pembayaran.
               </p>
             ) : (
               <div className="space-y-3">
                 {metodePembayaran.map((m) => (
                   <label
                     key={m.id}
-                    className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all ${
+                    className={`flex items-center p-4 border-2 cursor-pointer transition-all font-bold ${
                       selectedMetode === m.id
-                        ? "border-primary bg-primary/5 ring-1 ring-primary"
-                        : "border-border hover:bg-secondary/50"
+                        ? "border-[#3FA34D] bg-[#E8F5E9] shadow-[2px_2px_0px_#3FA34D]"
+                        : "border-[#D4AF84] hover:bg-[#F5E6C8]"
                     }`}
                   >
                     <input
@@ -279,7 +278,7 @@ function CheckoutForm() {
                       className="mr-4 h-4 w-4"
                     />
 
-                    <span className="font-medium">
+                    <span className="text-[#1F2933]">
                       {m.metode_pembayaran}
                     </span>
                   </label>
@@ -290,9 +289,9 @@ function CheckoutForm() {
         </div>
 
         <div>
-          <div className="bg-card border border-border rounded-3xl p-6 shadow-sm sticky top-24">
-            <h2 className="text-lg font-bold mb-4 border-b border-border pb-2">
-              Ringkasan Pesanan
+          <div className="minecraft-card p-6 sticky top-24 space-y-6">
+            <h2 className="text-lg font-bold border-b-2 border-[#D4AF84] pb-2 text-[#1F2933]">
+              📦 Ringkasan Pesanan
             </h2>
 
             <div className="space-y-4 mb-6">
@@ -300,34 +299,34 @@ function CheckoutForm() {
                 <img
                   src={paket.foto1}
                   alt={paket.nama_paket}
-                  className="w-full h-36 object-cover rounded-xl border"
+                  className="w-full h-36 object-cover border-2 border-[#D4AF84]"
                 />
               )}
 
               <div>
-                <p className="font-bold text-sm">{paket.nama_paket}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="font-bold text-[#1F2933]">{paket.nama_paket}</p>
+                <p className="text-xs text-[#6B7280] font-semibold">
                   {paket.jenis} - {paket.jumlah_pax} Pax
                 </p>
               </div>
 
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-medium">
+              <div className="flex justify-between text-sm font-bold text-[#1F2933]">
+                <span className="text-[#6B7280]">Subtotal</span>
+                <span>
                   Rp {paket.harga_paket?.toLocaleString("id-ID")}
                 </span>
               </div>
 
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Ongkos Kirim</span>
-                <span className="font-medium text-green-600">Gratis</span>
+              <div className="flex justify-between text-sm font-bold text-[#1F2933]">
+                <span className="text-[#6B7280]">Ongkos Kirim</span>
+                <span className="text-[#3FA34D]">Gratis 🎉</span>
               </div>
             </div>
 
-            <div className="border-t border-border pt-4 mb-6">
+            <div className="border-t-2 border-[#D4AF84] pt-4 mb-6">
               <div className="flex justify-between items-center">
-                <span className="font-bold">Total</span>
-                <span className="text-xl font-bold text-primary">
+                <span className="font-bold text-[#1F2933]">Total</span>
+                <span className="text-2xl font-bold text-[#3FA34D]">
                   Rp {paket.harga_paket?.toLocaleString("id-ID")}
                 </span>
               </div>
@@ -337,9 +336,9 @@ function CheckoutForm() {
               onClick={handleCheckout}
               disabled={processing || !selectedMetode}
               type="button"
-              className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl font-bold hover:bg-primary/90 transition-all disabled:opacity-50"
+              className="minecraft-button-primary w-full py-3.5 text-base disabled:opacity-50"
             >
-              {processing ? "Memproses..." : "Buat Pesanan"}
+              {processing ? "⏳ Memproses..." : "✅ Buat Pesanan"}
             </button>
           </div>
         </div>
@@ -355,22 +354,22 @@ function getErrorMessage(error: unknown) {
 
 export default function CheckoutPage() {
   return (
-    <div className="min-h-screen bg-secondary/10 px-4 pb-12">
-      <header className="h-20 flex items-center border-b border-border/40 mb-4 bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-[#8ED8F8] to-[#F5E6C8] px-4 pb-12">
+      <header className="h-20 flex items-center border-b-4 border-[#3b2f2f] mb-4 bg-[#A47148] shadow-[0_4px_0px_#2b2b2b]">
         <div className="container mx-auto px-4">
           <Link className="flex items-center gap-2" href="/">
-            <div className="bg-primary text-primary-foreground p-1.5 rounded-lg">
-              <Utensils className="h-5 w-5" />
+            <div className="bg-[#3FA34D] text-[#FFF8E7] p-1.5 border-2 border-[#3b2f2f] shadow-[2px_2px_0px_#2b2b2b]">
+              🍽️
             </div>
 
-            <span className="font-bold text-xl tracking-tight">
-              Symphony
+            <span className="font-bold text-xl tracking-tight text-[#FFF8E7]">
+              Catering-In
             </span>
           </Link>
         </div>
       </header>
 
-      <Suspense fallback={<div className="text-center p-12">Memuat...</div>}>
+      <Suspense fallback={<div className="text-center p-12 text-[#1F2933] font-bold">⏳ Memuat...</div>}>
         <CheckoutForm />
       </Suspense>
     </div>

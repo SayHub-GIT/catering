@@ -1,46 +1,222 @@
-@import "tailwindcss";
-
-@theme {
-  --color-border: hsl(214.3, 31.8%, 91.4%);
-  --color-input: hsl(214.3, 31.8%, 91.4%);
-  --color-ring: hsl(38, 92%, 50%);
-  --color-background: hsl(0, 0%, 100%);
-  --color-foreground: hsl(222.2, 84%, 4.9%);
-
-  --color-primary: hsl(38, 92%, 50%);
-  --color-primary-foreground: hsl(210, 40%, 98%);
-
-  --color-secondary: hsl(210, 40%, 96.1%);
-  --color-secondary-foreground: hsl(222.2, 47.4%, 11.2%);
-
-  --color-destructive: hsl(0, 84.2%, 60.2%);
-  --color-destructive-foreground: hsl(210, 40%, 98%);
-
-  --color-muted: hsl(210, 40%, 96.1%);
-  --color-muted-foreground: hsl(215.4, 16.3%, 46.9%);
-
-  --color-accent: hsl(210, 40%, 96.1%);
-  --color-accent-foreground: hsl(222.2, 47.4%, 11.2%);
-
-  --color-popover: hsl(0, 0%, 100%);
-  --color-popover-foreground: hsl(222.2, 84%, 4.9%);
-
-  --color-card: hsl(0, 0%, 100%);
-  --color-card-foreground: hsl(222.2, 84%, 4.9%);
-
-  --radius-lg: 0.5rem;
-  --radius-md: calc(0.5rem - 2px);
-  --radius-sm: calc(0.5rem - 4px);
-}
-
 @layer base {
   *,
   ::after,
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-border, currentColor);
+    @apply border-current;
   }
+
+  body {
+    background: linear-gradient(180deg, #8ED8F8 0%, #F5E6C8 100%);
+    min-height: 100vh;
+  }
+}
+
+/* Minecraft-style utility classes - defined before @import "tailwindcss" */
+.minecraft-card {
+  border: 2px solid #3b2f2f;
+  background-color: #F5E6C8;
+  box-shadow: 4px 4px 0px #2b2b2b;
+}
+
+.minecraft-button {
+  display: inline-block;
+  border: 2px solid #3b2f2f;
+  padding: 0.5rem 1rem;
+  font-weight: bold;
+  transition: all 150ms;
+  box-shadow: 3px 3px 0px #2b2b2b;
+  cursor: pointer;
+}
+
+.minecraft-button:active {
+  box-shadow: 1px 1px 0px #2b2b2b;
+  transform: translate(2px, 2px);
+}
+
+.minecraft-button-primary {
+  background-color: #3FA34D;
+  color: #FFF8E7;
+  border: 2px solid #3b2f2f;
+  padding: 0.5rem 1rem;
+  font-weight: bold;
+  transition: all 150ms;
+  box-shadow: 3px 3px 0px #2b2b2b;
+  cursor: pointer;
+}
+
+.minecraft-button-primary:hover {
+  transform: translateY(-4px);
+}
+
+.minecraft-button-primary:active {
+  box-shadow: 1px 1px 0px #2b2b2b;
+  transform: translate(2px, 2px);
+}
+
+.minecraft-button-secondary {
+  background-color: #A47148;
+  color: #FFF8E7;
+  border: 2px solid #3b2f2f;
+  padding: 0.5rem 1rem;
+  font-weight: bold;
+  transition: all 150ms;
+  box-shadow: 3px 3px 0px #2b2b2b;
+  cursor: pointer;
+}
+
+.minecraft-button-secondary:hover {
+  transform: translateY(-4px);
+}
+
+.minecraft-button-secondary:active {
+  box-shadow: 1px 1px 0px #2b2b2b;
+  transform: translate(2px, 2px);
+}
+
+.minecraft-button-danger {
+  background-color: #DC2626;
+  color: #FFF8E7;
+  border: 2px solid #3b2f2f;
+  padding: 0.5rem 1rem;
+  font-weight: bold;
+  transition: all 150ms;
+  box-shadow: 3px 3px 0px #2b2b2b;
+  cursor: pointer;
+}
+
+.minecraft-button-danger:hover {
+  transform: translateY(-4px);
+}
+
+.minecraft-button-danger:active {
+  box-shadow: 1px 1px 0px #2b2b2b;
+  transform: translate(2px, 2px);
+}
+
+.minecraft-button-stone {
+  background-color: #6B7280;
+  color: #FFF8E7;
+  border: 2px solid #3b2f2f;
+  padding: 0.5rem 1rem;
+  font-weight: bold;
+  transition: all 150ms;
+  box-shadow: 3px 3px 0px #2b2b2b;
+  cursor: pointer;
+}
+
+.minecraft-button-stone:hover {
+  transform: translateY(-4px);
+}
+
+.minecraft-button-stone:active {
+  box-shadow: 1px 1px 0px #2b2b2b;
+  transform: translate(2px, 2px);
+}
+
+.minecraft-panel {
+  border: 2px solid #4a3c2a;
+  background-color: #A47148;
+  padding: 1rem;
+  box-shadow: 4px 4px 0px #2b2b2b;
+}
+
+.minecraft-input {
+  border: 2px solid #3b2f2f;
+  background-color: #FFF8E7;
+  padding: 0.5rem 0.75rem;
+  font-weight: 500;
+}
+
+.minecraft-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #3FA34D;
+  border-color: #3FA34D;
+}
+
+.minecraft-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.minecraft-table thead {
+  background-color: #2E7D32;
+  color: #FFF8E7;
+}
+
+.minecraft-table th {
+  border: 2px solid #1F2933;
+  padding: 0.5rem 1rem;
+  text-align: left;
+  font-weight: bold;
+}
+
+.minecraft-table td {
+  border: 2px solid #D4AF84;
+  padding: 0.5rem 1rem;
+}
+
+.minecraft-table tbody tr:hover {
+  background-color: #E8F5E9;
+}
+
+.block-shadow {
+  box-shadow: 4px 4px 0px #2b2b2b;
+}
+
+.pixel-bg {
+  background-image: 
+    linear-gradient(0deg, transparent 24%, rgba(255, 248, 231, 0.05) 25%, rgba(255, 248, 231, 0.05) 26%, transparent 27%, transparent 74%, rgba(255, 248, 231, 0.05) 75%, rgba(255, 248, 231, 0.05) 76%, transparent 77%, transparent),
+    linear-gradient(90deg, transparent 24%, rgba(255, 248, 231, 0.05) 25%, rgba(255, 248, 231, 0.05) 26%, transparent 27%, transparent 74%, rgba(255, 248, 231, 0.05) 75%, rgba(255, 248, 231, 0.05) 76%, transparent 77%, transparent);
+  background-size: 50px 50px;
+}
+
+@import "tailwindcss";
+
+@theme {
+  /* Minecraft Palette */
+  --color-grass-green: #3FA34D;
+  --color-dark-grass: #2E7D32;
+  --color-dirt-brown: #8B5A2B;
+  --color-wood-brown: #A47148;
+  --color-stone-gray: #6B7280;
+  --color-sand-cream: #F5E6C8;
+  --color-sky-blue: #8ED8F8;
+  --color-coal-black: #1F2933;
+  --color-off-white: #FFF8E7;
+
+  /* Primary colors - Grass green for primary actions */
+  --color-border: #D4AF84;
+  --color-input: #F5E6C8;
+  --color-ring: #3FA34D;
+  --color-background: #FFF8E7;
+  --color-foreground: #1F2933;
+
+  --color-primary: #3FA34D;
+  --color-primary-foreground: #FFF8E7;
+
+  --color-secondary: #A47148;
+  --color-secondary-foreground: #FFF8E7;
+
+  --color-destructive: #DC2626;
+  --color-destructive-foreground: #FFF8E7;
+
+  --color-muted: #D4AF84;
+  --color-muted-foreground: #6B7280;
+
+  --color-accent: #8ED8F8;
+  --color-accent-foreground: #1F2933;
+
+  --color-popover: #FFF8E7;
+  --color-popover-foreground: #1F2933;
+
+  --color-card: #F5E6C8;
+  --color-card-foreground: #1F2933;
+
+  --radius-lg: 0.25rem;
+  --radius-md: 0.125rem;
+  --radius-sm: 0rem;
 }
 
 @utility container {

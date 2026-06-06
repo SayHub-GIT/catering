@@ -1,18 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { ReactNode } from "react";
-import {
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle2,
-  ImageIcon,
-  Users,
-  Utensils,
-} from "lucide-react";
-
-import Navbar from "@/app/navbar";
 import { supabase } from "@/lib/supabase";
 import type { Database } from "@/types/database.types";
+
+import Navbar from "@/app/navbar";
 
 type Paket = Database["public"]["Tables"]["pakets"]["Row"];
 
@@ -45,21 +36,20 @@ export default async function PaketDetailPage({
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-[#8ED8F8] to-[#F5E6C8]">
       <Navbar />
 
       <main className="container px-4 md:px-6 py-10 md:py-14 mx-auto">
         <Link
           href="/#packages"
-          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-sm font-bold text-[#1F2933] hover:text-[#3FA34D] transition-colors mb-8"
         >
-          <ArrowLeft className="h-4 w-4" />
-          Kembali ke paket menu
+          ← Kembali ke paket menu
         </Link>
 
         <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 items-start">
           <section className="space-y-4">
-            <div className="aspect-[4/3] bg-muted rounded-3xl overflow-hidden border border-border">
+            <div className="aspect-[4/3] bg-[#D4AF84] border-2 border-[#3b2f2f] overflow-hidden shadow-[4px_4px_0px_#2b2b2b]">
               {paket.foto1 ? (
                 <img
                   src={paket.foto1}
@@ -67,8 +57,8 @@ export default async function PaketDetailPage({
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <div className="h-full w-full flex items-center justify-center bg-secondary">
-                  <ImageIcon className="h-14 w-14 text-muted-foreground/40" />
+                <div className="h-full w-full flex items-center justify-center bg-[#A47148] text-4xl">
+                  📦
                 </div>
               )}
             </div>
@@ -78,7 +68,7 @@ export default async function PaketDetailPage({
                 {gallery.map((foto, index) => (
                   <div
                     key={`${foto}-${index}`}
-                    className="aspect-[4/3] bg-muted rounded-2xl overflow-hidden border border-border"
+                    className="aspect-[4/3] bg-[#D4AF84] border-2 border-[#3b2f2f] overflow-hidden shadow-[3px_3px_0px_#2b2b2b]"
                   >
                     <img
                       src={foto}
@@ -95,24 +85,24 @@ export default async function PaketDetailPage({
             <div className="space-y-5">
               <div className="flex flex-wrap gap-2">
                 {paket.kategori && (
-                  <span className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1.5 rounded-full">
+                  <span className="bg-[#3FA34D] text-[#FFF8E7] text-xs font-bold px-3 py-1.5 border-2 border-[#3b2f2f] shadow-[2px_2px_0px_#2b2b2b]">
                     {paket.kategori}
                   </span>
                 )}
 
                 {paket.jenis && (
-                  <span className="bg-secondary text-secondary-foreground text-xs font-bold px-3 py-1.5 rounded-full border border-border">
+                  <span className="bg-[#A47148] text-[#FFF8E7] text-xs font-bold px-3 py-1.5 border-2 border-[#3b2f2f] shadow-[2px_2px_0px_#2b2b2b]">
                     {paket.jenis}
                   </span>
                 )}
               </div>
 
               <div className="space-y-3">
-                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">
+                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-[#1F2933]" style={{ textShadow: '2px 2px 0px rgba(31, 41, 51, 0.2)' }}>
                   {paket.nama_paket}
                 </h1>
 
-                <p className="text-muted-foreground leading-relaxed text-base md:text-lg">
+                <p className="text-[#6B7280] leading-relaxed text-base md:text-lg font-semibold">
                   {paket.deskripsi || "Detail paket belum ditambahkan."}
                 </p>
               </div>
@@ -120,45 +110,42 @@ export default async function PaketDetailPage({
 
             <div className="grid sm:grid-cols-2 gap-4">
               <InfoItem
-                icon={<Users className="h-5 w-5" />}
-                label="Jumlah Pax"
+                label="👥 Jumlah Pax"
                 value={paket.jumlah_pax ? `${paket.jumlah_pax} Pax` : "-"}
               />
 
               <InfoItem
-                icon={<Utensils className="h-5 w-5" />}
-                label="Tipe Layanan"
+                label="🍽️ Tipe Layanan"
                 value={paket.jenis || "-"}
               />
             </div>
 
-            <div className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-5">
+            <div className="minecraft-card p-6 space-y-5">
               <div>
-                <p className="text-sm text-muted-foreground font-medium">
-                  Harga paket
+                <p className="text-sm text-[#6B7280] font-bold">
+                  💰 Harga paket
                 </p>
-                <p className="text-3xl font-extrabold text-primary mt-1">
+                <p className="text-4xl font-extrabold text-[#3FA34D] mt-1">
                   Rp {formatRupiah(paket.harga_paket)}
                 </p>
               </div>
 
-              <ul className="space-y-3 text-sm text-muted-foreground">
+              <ul className="space-y-3 text-sm text-[#1F2933] font-semibold">
                 <li className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <span className="text-lg">✅</span>
                   Cocok untuk acara {paket.kategori?.toLowerCase() || "Anda"}
                 </li>
                 <li className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <span className="text-lg">✅</span>
                   Paket sudah dihitung untuk kebutuhan pax yang tercantum
                 </li>
               </ul>
 
               <Link
                 href={`/checkout?paket_id=${paket.id}`}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90"
+                className="minecraft-button-primary w-full py-4 text-base inline-flex items-center justify-center gap-2 hover:-translate-y-1"
               >
-                Pesan Paket Ini
-                <ArrowRight className="h-5 w-5" />
+                🛒 Pesan Paket Ini
               </Link>
             </div>
           </section>
@@ -169,20 +156,20 @@ export default async function PaketDetailPage({
 }
 
 function InfoItem({
-  icon,
   label,
   value,
 }: {
-  icon: ReactNode;
   label: string;
   value: string;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
-      <div className="rounded-xl bg-primary/10 p-3 text-primary">{icon}</div>
+    <div className="flex items-center gap-4 minecraft-card p-4">
+      <div className="text-2xl">
+        {label.includes("Pax") ? "👥" : "🍽️"}
+      </div>
       <div>
-        <p className="text-xs font-medium text-muted-foreground">{label}</p>
-        <p className="font-bold">{value}</p>
+        <p className="text-xs font-bold text-[#6B7280]">{label}</p>
+        <p className="font-bold text-[#1F2933]">{value}</p>
       </div>
     </div>
   );

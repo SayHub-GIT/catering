@@ -2,12 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ShoppingCart,
-  Package,
-  Users,
-  DollarSign,
-} from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
 import { getSession, type SessionUser } from "@/lib/auth";
@@ -101,84 +95,50 @@ export default function AdminDashboard() {
   }
 
   if (loading || !user) {
-    return <div>Memuat data statistik...</div>;
+    return <div className="text-[#1F2933] font-bold">⏳ Memuat data statistik...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Ringkasan Bisnis
+        <h1 className="text-3xl font-bold tracking-tight text-[#1F2933]">
+          📊 Ringkasan Bisnis
         </h1>
 
-        <p className="text-muted-foreground">
-          Selamat datang, {user.nama}. Anda login sebagai {user.role}.
+        <p className="text-[#6B7280] font-semibold">
+          Selamat datang, <span className="text-[#3FA34D] font-bold">{user.nama}</span>. Anda login sebagai <span className="uppercase text-[#1F2933] font-bold">{user.role}</span>.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
-          <div className="flex flex-row items-center justify-between pb-2">
-            <h3 className="tracking-tight text-sm font-medium">
-              Total Pesanan
-            </h3>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </div>
-
-          <div className="text-2xl font-bold">
-            {stats.totalPesanan}
-          </div>
-        </div>
-
-        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
-          <div className="flex flex-row items-center justify-between pb-2">
-            <h3 className="tracking-tight text-sm font-medium">
-              Total Pendapatan
-            </h3>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </div>
-
-          <div className="text-2xl font-bold">
-            Rp {stats.totalPendapatan.toLocaleString("id-ID")}
-          </div>
-        </div>
-
-        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
-          <div className="flex flex-row items-center justify-between pb-2">
-            <h3 className="tracking-tight text-sm font-medium">
-              Total Pelanggan
-            </h3>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </div>
-
-          <div className="text-2xl font-bold">
-            {stats.totalPelanggan}
-          </div>
-        </div>
-
-        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
-          <div className="flex flex-row items-center justify-between pb-2">
-            <h3 className="tracking-tight text-sm font-medium">
-              Paket Aktif
-            </h3>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </div>
-
-          <div className="text-2xl font-bold">
-            {stats.totalPaket}
-          </div>
-        </div>
+        <StatCard emoji="🛒" title="Total Pesanan" value={String(stats.totalPesanan)} />
+        <StatCard emoji="💰" title="Total Pendapatan" value={`Rp ${stats.totalPendapatan.toLocaleString("id-ID")}`} />
+        <StatCard emoji="👥" title="Total Pelanggan" value={String(stats.totalPelanggan)} />
+        <StatCard emoji="📦" title="Paket Aktif" value={String(stats.totalPaket)} />
       </div>
 
-      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-        <h3 className="font-bold text-lg mb-4">Informasi Sistem</h3>
+      <div className="minecraft-card p-6 space-y-4">
+        <h3 className="font-bold text-lg text-[#1F2933]">ℹ️ Informasi Sistem</h3>
 
-        <p className="text-muted-foreground text-sm">
-          Sistem ini terhubung langsung dengan database Supabase. Semua
-          perubahan pada pesanan, paket, dan pengiriman akan tersinkronisasi
-          dengan database. Gunakan menu di samping untuk mengelola data
-          operasional.
+        <p className="text-[#6B7280] text-sm font-semibold leading-relaxed">
+          Sistem ini terhubung langsung dengan database Supabase. Semua perubahan pada pesanan, paket, dan pengiriman akan tersinkronisasi dengan database. Gunakan menu di samping untuk mengelola data operasional.
         </p>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ emoji, title, value }: { emoji: string; title: string; value: string }) {
+  return (
+    <div className="minecraft-card p-6 space-y-2 hover:-translate-y-1 transition-transform">
+      <div className="flex flex-row items-center justify-between pb-2">
+        <h3 className="tracking-tight text-sm font-bold text-[#1F2933]">
+          {emoji} {title}
+        </h3>
+      </div>
+
+      <div className="text-2xl font-bold text-[#3FA34D]">
+        {value}
       </div>
     </div>
   );
